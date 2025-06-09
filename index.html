@@ -12,48 +12,15 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-    }
-    #mapContainer {
-      margin-top: 20px;
-      width: 100%;
-      position: relative;
-      overflow: hidden;
-      max-height: 600px; /* Adjust to trim the extra space */
-    }
-
-    svg {
-      width: 100%;
-      height: auto;
-    }
-    .state, .state-label {
-      cursor: pointer;
-      transition: fill 0.2s, transform 0.2s;
-    }
-    .state:hover {
-      fill: #007BFF;
-    }
-    .state-label:hover {
-      fill: #0056b3;
-    }
-    .state.selected, .state-label.selected {
-      fill: #004080 !important;
-      transform: scale(1.05);
-    }
-    #stateLink {
-      margin-top: 20px;
-    }
-    ul {
-      list-style-type: none;
-      padding-left: 0;
-    }
-    li {
-      margin-bottom: 8px;
+      align-items: center;
     }
 
     header {
       display: flex;
       align-items: center;
       gap: 20px;
+      width: 100%;
+      max-width: 900px;
     }
 
     .logo {
@@ -71,18 +38,62 @@
       font-size: 1.75em;
     }
 
+    h2 {
+      width: 100%;
+      max-width: 900px;
+      margin-top: 20px;
+    }
+
+    #mapContainer {
+      width: 100%;
+      max-width: 1100px;
+      margin: 10px;
+      overflow: hidden;
+      max-height: 60vh;           /* 60% of viewport height */
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 60vh;
+    }
+
+    /* hover & selected effects */
+    .state, .state-label {
+      cursor: pointer;
+      transition: fill 0.2s, transform 0.2s;
+    }
+    .state:hover { fill: #007BFF; }
+    .state-label:hover { fill: #0056b3; }
+    .state.selected,
+    .state-label.selected {
+      fill: #004080 !important;
+      transform: scale(1.05);
+    }
+
+    #stateLink {
+      width: 100%;
+      max-width: 900px;
+      margin-top: 20px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+
     .btn {
       display: inline-block;
       margin: 5px;
       padding: 10px 20px;
       background-color: #007BFF;
-      color: white;
+      color: #fff;
       text-decoration: none;
-      border: none;
       border-radius: 5px;
-      text-align: center;
-      cursor: pointer;
       font-size: 1em;
+      text-align: center;
     }
     .btn:hover {
       background-color: #0056b3;
@@ -94,25 +105,33 @@
     }
 
     footer {
-      padding-top: 50px;
-      text-align: center;
+      width: 100%;
+      max-width: 900px;
       margin-top: auto;
+      padding: 20px 0;
+      text-align: center;
     }
-
     footer a {
-      text-decoration: none;
       color: #007BFF;
+      text-decoration: none;
     }
-
     footer a:hover {
       text-decoration: underline;
+    }
+
+    /* smaller screens: shrink map a bit more */
+    @media (max-width: 600px) {
+      #mapContainer {
+        max-height: 50vh;
+      }
     }
   </style>
 </head>
 
 <body>
   <header>
-    <div class="logo" role="img" aria-label="Krucial Rapid Response Logo"></div><h1>Required State Posters</h1>
+    <div class="logo" role="img" aria-label="Krucial Rapid Response Logo"></div>
+    <h1>Required State Posters</h1>
   </header>
 
   <h2>Click on your state or its label to download posters:</h2>
@@ -124,7 +143,7 @@
   <script>
     const states = [
       "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut",
-      "Delaware", "District of Columbia", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois",
+      "Delaware", "Washington, DC", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois",
       "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts",
       "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada",
       "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota",
@@ -133,14 +152,13 @@
       "West Virginia", "Wisconsin", "Wyoming"
     ];
 
-    // Build file paths
     const stateFiles = {};
-    states.forEach(state => {
-      const stateSlug = state.toLowerCase().replace(/\s+/g, '-');
-      stateFiles[state] = {
-        workersComp: `https://ik.imagekit.io/krucial/RequiredStatePosters/files/${stateSlug}-workers-comp.pdf`,
-        laborPoster: `https://ik.imagekit.io/krucial/RequiredStatePosters/files/${stateSlug}-labor-poster.pdf`,
-        other: "" // Optional: Add 'other' file
+    states.forEach(s => {
+      const slug = s.toLowerCase().replace(/\s+/g, '-');
+      stateFiles[s] = {
+        workersComp: `https://ik.imagekit.io/krucial/RequiredStatePosters/files/${slug}-workers-comp.pdf`,
+        laborPoster:`https://ik.imagekit.io/krucial/RequiredStatePosters/files/${slug}-labor-poster.pdf`,
+        other: ""
       };
     });
 
@@ -148,98 +166,68 @@
 
     async function checkFileExists(url) {
       try {
-        const response = await fetch(url, { method: 'HEAD' });
-        return response.ok;
-      } catch (error) {
+        const res = await fetch(url, { method:'HEAD' });
+        return res.ok;
+      } catch {
         return false;
       }
     }
 
     async function loadMap() {
-      const response = await fetch('https://ik.imagekit.io/krucial/RequiredStatePosters/files/us.svg');
-      const svgText = await response.text();
-      document.getElementById('mapContainer').innerHTML = svgText;
+      const resp = await fetch('https://ik.imagekit.io/krucial/RequiredStatePosters/files/us.svg');
+      const text = await resp.text();
+      document.getElementById('mapContainer').innerHTML = text;
 
-      const svg = document.querySelector("#mapContainer svg");
-
-      // 🧽 Remove inline fill attributes
+      const svg = document.querySelector('#mapContainer svg');
+      // strip inline fills
       svg.querySelectorAll('[fill]').forEach(el => el.removeAttribute('fill'));
 
-      // Select all shapes and text labels
-      const shapes = svg.querySelectorAll('path[id]');
-      const labels = svg.querySelectorAll('text');
-
-      // Add event listeners to shapes
-      shapes.forEach(state => {
-        const stateName = state.id.trim();
-        
-        if (states.includes(stateName)) {
-          state.classList.add('state');
-          state.addEventListener('click', () => selectState(stateName));
+      // attach to shapes
+      svg.querySelectorAll('path[id]').forEach(path => {
+        const name = path.id.trim();
+        if (states.includes(name)) {
+          path.classList.add('state');
+          path.addEventListener('click', () => selectState(name));
         }
       });
-
-      // Add event listeners to labels
-      labels.forEach(label => {
-        const labelText = label.textContent.trim();
-
-        if (states.includes(labelText)) {
-          label.classList.add('state-label');
-          label.addEventListener('click', () => selectState(labelText));
+      // attach to labels
+      svg.querySelectorAll('text').forEach(txt => {
+        const name = txt.textContent.trim();
+        if (states.includes(name)) {
+          txt.classList.add('state-label');
+          txt.addEventListener('click', () => selectState(name));
         }
       });
     }
 
-    let previousSelected = null;
+    let prev = null;
+    async function selectState(name) {
+      // clear old
+      if (prev) document.querySelectorAll('.selected').forEach(el=>el.classList.remove('selected'));
 
-    async function selectState(stateName) {
-      // Clear previous selection
-      if (previousSelected) {
-        document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
-      }
+      // highlight
+      const shp = document.getElementById(name);
+      const lbl = [...document.querySelectorAll('text')].find(t=>t.textContent.trim()===name);
+      if (shp) shp.classList.add('selected');
+      if (lbl) lbl.classList.add('selected');
+      prev = name;
 
-      // Highlight the clicked state and its label
-      const shape = document.getElementById(stateName);
-      const label = [...document.querySelectorAll('text')].find(text => text.textContent.trim() === stateName);
-
-      if (shape) shape.classList.add('selected');
-      if (label) label.classList.add('selected');
-
-      previousSelected = stateName;
-
-      // Show the loading message
-      linkDiv.innerHTML = `<div class="loading">Checking available documents for ${stateName}...</div>`;
-
-      const data = stateFiles[stateName];
-
-      if (data) {
-        let html = `<ul>`;
-        const workersCompExists = await checkFileExists(data.workersComp);
-        const laborPosterExists = await checkFileExists(data.laborPoster);
-        const otherExists = data.other ? await checkFileExists(data.other) : false;
-
-        if (workersCompExists) {
-          html += `<li><a href="${data.workersComp}" target="_blank" class="btn">Workers' Comp Notice</a></li>`;
-        }
-        if (laborPosterExists) {
-          html += `<li><a href="${data.laborPoster}" target="_blank" class="btn">Labor Law Poster</a></li>`;
-        }
-        if (otherExists) {
-          html += `<li><a href="${data.other}" target="_blank" class="btn">Other</a></li>`;
-        }
-        html += `</ul>`;
-
-        linkDiv.innerHTML = html || `<div>No documents available for ${stateName}.</div>`;
-      } else {
-        linkDiv.innerHTML = `<div>No documents available for ${stateName}.</div>`;
-      }
+      // show buttons
+      linkDiv.innerHTML = `<div class="loading">Checking available documents for ${name}…</div>`;
+      const files = stateFiles[name];
+      let html = `<ul>`;
+      if (await checkFileExists(files.workersComp)) html += `<li><a class="btn" href="${files.workersComp}" target="_blank">Workers' Comp Notice</a></li>`;
+      if (await checkFileExists(files.laborPoster)) html += `<li><a class="btn" href="${files.laborPoster}" target="_blank">Labor Law Poster</a></li>`;
+      if (files.other && await checkFileExists(files.other)) html += `<li><a class="btn" href="${files.other}" target="_blank">Other</a></li>`;
+      html += `</ul>`;
+      linkDiv.innerHTML = html || `<div>No documents available for ${name}.</div>`;
     }
 
     loadMap();
   </script>
 
   <footer>
-    <h1><a href="https://krucialrr.org/paylocity" target="_blank">Return to Paylocity</a></h1>
+    <a href="https://krucialrr.org/paylocity" target="_blank">Return to Paylocity</a>
   </footer>
 </body>
 </html>
