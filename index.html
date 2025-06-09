@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Required State Posters | Krucial Rapid Response</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+    body {
+      font-family: Montserrat, sans-serif;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #mapContainer {
+      margin-top: 20px;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      max-height: 600px; /* Adjust to trim the extra space */
+    }
+
+    svg {
+      width: 100%;
+      height: auto;
+    }
+    .state, .state-label {
+      cursor: pointer;
+      transition: fill 0.2s, transform 0.2s;
+    }
+    .state:hover {
+      fill: #007BFF;
+    }
+    .state-label:hover {
+      fill: #0056b3;
+    }
+    .state.selected, .state-label.selected {
+      fill: #004080 !important;
+      transform: scale(1.05);
+    }
+    #stateLink {
+      margin-top: 20px;
+    }
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logo {
+      background-image: url('https://ik.imagekit.io/krucial/KrucialRapidResponseLogo-col/KrucialRapidResponseLogo-col-borderless.svg');
+      background-repeat: no-repeat;
+      background-size: contain;
+      background-position: center;
+      width: 150px;
+      height: 60px;
+      flex-shrink: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.75em;
+    }
+
+    .btn {
+      display: inline-block;
+      margin: 5px;
+      padding: 10px 20px;
+      background-color: #007BFF;
+      color: white;
+      text-decoration: none;
+      border: none;
+      border-radius: 5px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 1em;
+    }
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    .loading {
+      font-style: italic;
+      color: gray;
+    }
+
+    footer {
+      padding-top: 50px;
+      text-align: center;
+      margin-top: auto;
+    }
+
+    footer a {
+      text-decoration: none;
+      color: #007BFF;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="logo" role="img" aria-label="Krucial Rapid Response Logo"></div><h1>Required State Posters</h1>
+  </header>
+
+  <h2>Click on your state or its label to download posters:</h2>
+
+  <div id="mapContainer"></div>
+
+  <div id="stateLink"></div>
+
+  <script>
+    const states = [
+      "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut",
+      "Delaware", "District of Columbia", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois",
+      "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts",
+      "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada",
+      "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota",
+      "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina",
+      "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington",
+      "West Virginia", "Wisconsin", "Wyoming"
+    ];
+
+    // Build file paths
+    const stateFiles = {};
+    states.forEach(state => {
+      const stateSlug = state.toLowerCase().replace(/\s+/g, '-');
+      stateFiles[state] = {
+        workersComp: `https://ik.imagekit.io/krucial/RequiredStatePosters/files/${stateSlug}-workers-comp.pdf`,
+        laborPoster: `https://ik.imagekit.io/krucial/RequiredStatePosters/files/${stateSlug}-labor-poster.pdf`,
+        other: "" // Optional: Add 'other' file
+      };
+    });
+
+    const linkDiv = document.getElementById("stateLink");
+
+    async function checkFileExists(url) {
+      try {
+        const response = await fetch(url, { method: 'HEAD' });
+        return response.ok;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    async function loadMap() {
+      const response = await fetch('https://ik.imagekit.io/krucial/RequiredStatePosters/files/us.svg');
+      const svgText = await response.text();
+      document.getElementById('mapContainer').innerHTML = svgText;
+
+      const svg = document.querySelector("#mapContainer svg");
+
+      // 🧽 Remove inline fill attributes
+      svg.querySelectorAll('[fill]').forEach(el => el.removeAttribute('fill'));
+
+      // Select all shapes and text labels
+      const shapes = svg.querySelectorAll('path[id]');
+      const labels = svg.querySelectorAll('text');
+
+      // Add event listeners to shapes
+      shapes.forEach(state => {
+        const stateName = state.id.trim();
+        
+        if (states.includes(stateName)) {
+          state.classList.add('state');
+          state.addEventListener('click', () => selectState(stateName));
+        }
+      });
+
+      // Add event listeners to labels
+      labels.forEach(label => {
+        const labelText = label.textContent.trim();
+
+        if (states.includes(labelText)) {
+          label.classList.add('state-label');
+          label.addEventListener('click', () => selectState(labelText));
+        }
+      });
+    }
+
+    let previousSelected = null;
+
+    async function selectState(stateName) {
+      // Clear previous selection
+      if (previousSelected) {
+        document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+      }
+
+      // Highlight the clicked state and its label
+      const shape = document.getElementById(stateName);
+      const label = [...document.querySelectorAll('text')].find(text => text.textContent.trim() === stateName);
+
+      if (shape) shape.classList.add('selected');
+      if (label) label.classList.add('selected');
+
+      previousSelected = stateName;
+
+      // Show the loading message
+      linkDiv.innerHTML = `<div class="loading">Checking available documents for ${stateName}...</div>`;
+
+      const data = stateFiles[stateName];
+
+      if (data) {
+        let html = `<ul>`;
+        const workersCompExists = await checkFileExists(data.workersComp);
+        const laborPosterExists = await checkFileExists(data.laborPoster);
+        const otherExists = data.other ? await checkFileExists(data.other) : false;
+
+        if (workersCompExists) {
+          html += `<li><a href="${data.workersComp}" target="_blank" class="btn">Workers' Comp Notice</a></li>`;
+        }
+        if (laborPosterExists) {
+          html += `<li><a href="${data.laborPoster}" target="_blank" class="btn">Labor Law Poster</a></li>`;
+        }
+        if (otherExists) {
+          html += `<li><a href="${data.other}" target="_blank" class="btn">Other</a></li>`;
+        }
+        html += `</ul>`;
+
+        linkDiv.innerHTML = html || `<div>No documents available for ${stateName}.</div>`;
+      } else {
+        linkDiv.innerHTML = `<div>No documents available for ${stateName}.</div>`;
+      }
+    }
+
+    loadMap();
+  </script>
+
+  <footer>
+    <h1><a href="https://krucialrr.org/paylocity" target="_blank">Return to Paylocity</a></h1>
+  </footer>
+</body>
+</html>
